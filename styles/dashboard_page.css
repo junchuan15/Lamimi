@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Bevan:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Jaro:opsz@6..72&family=Lilita+One&family=Sarala:wght@400;700&family=Seymour+One&family=Sigmar&family=Ultra&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Bevan:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Jaro:opsz@6..72&family=Lilita+One&family=Sarala:wght@400;700&family=Seymour+One&family=Sigmar&family=Ultra&family=Source+Sans+Pro:ital,wght@0,200..900;1,200..900&display=swap');
 
 @font-face {
     font-family: "Trade Gothic LT Std";
@@ -7,17 +7,39 @@
     font-style: normal;
 }
 
-.dashboard-header {
-    text-align: center;
-    padding: 1.2rem;
-    border-radius: 15px;
-    background: linear-gradient(90deg, #fffdf2, #e3e4e2);
-    box-shadow: 0px 10px 10px rgba(0,0,0,0.08);
-    margin-bottom: 20px;
+.dashboard-header { 
+    text-align: left; 
+    border-radius: 15px; 
+    background: #ffffff; 
+    border: 2px solid #2E4057;    
+    box-shadow: 0px 10px 10px rgba(46, 64, 87, 0.2);
+    margin-bottom: 15px;
+    margin-top: -50px; 
+    padding: 0.7rem;
+    justify-content: space-between;
 }
 
-.dashboard-header h1 {
-    color: #2E4057;
-    font-family: "Trade Gothic LT Std";
-    margin-bottom: 0;
+.dashboard-header h1 { 
+    color: #2E4057; 
+    font-family: "Source Sans Pro"; 
+    padding-left: 1.0rem;
+    font-size: 45px;
+    font-weight: bold;
+    letter-spacing: 0.6px;
+    margin-bottom: 0; 
 }
+
+.insights-title h1 {
+    color: #2E4057 ;
+    font-family: "Source Sans Pro" ;
+    font-size: 40px ;
+    font-weight: bold ;
+}
+
+.form-label h5 {
+    color: #353638;
+    font-size: 18px;
+    font-style: italic;
+}
+
+

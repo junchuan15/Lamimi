@@ -1,22 +1,37 @@
 import streamlit as st
+from streamlit_option_menu import option_menu
+from app_pages.chatbot import chatbot_page
+from app_pages.dashboard import dashboard_page
+from app_pages.analyzeComment import comment_senser_page    
 
+# --- Page Config ---
 st.set_page_config(
-    page_title="L'Oréal Datathon",
+    page_title="L'ORÉAL Datathon",
     layout="wide",
     menu_items={
-        'About': """
-        This is the website for L'Oréal Datathon.
-        """
+        'About': "This is the website for L'ORÉAL Datathon."
     }
 )
-st.logo("https://www.loreal.com/-/media/project/loreal/brand-sites/corp/master/lcorp/7-local-country-folder/malaysia/news/group/scam-whatsapp-message-on-loreal/loreal-malaysia-logo01.jpg?rev=deb16ca878f4468e81d46554f7334b34&cx=0.49&cy=0.5&cw=1920&ch=800&blr=False&hash=9435E8E651AD6717C4A582E6D653E5B1", link="https://www.loreal.com/en/malaysia/", size="large")
 
-pages = [
- st.Page("pages/dashboard.py", title="Dashboard", icon=":material/analytics:", default=True),
- st.Page("pages/analyzeComment.py", title="Comment Senser", icon=":material/video_chat:"),
- st.Page("pages/chatbot.py", title="Loreal Chat", icon=":material/robot_2:"),
-]
+with st.sidebar:
+    st.image("assets/logo-removebg.png", use_container_width=True)
 
-# --- NAVIGATION SETUP ---
-main = st.navigation(pages, position="sidebar")
-main.run()
+    # Navigation menu
+    selected = option_menu(
+        menu_title="Main Menu",
+        options=["Insights Hub", "Chat Assistant", "Comment Senser"],
+        icons=["lightbulb", "robot", "chat-dots"],
+        menu_icon="list",
+        default_index=0,
+    )
+
+if selected == "Insights Hub":
+    dashboard_page()
+    
+elif selected == "Chat Assistant":
+    chatbot_page()
+    
+elif selected == "Comment Senser":
+    comment_senser_page()
+
+

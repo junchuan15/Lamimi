@@ -28,9 +28,12 @@ resources = [
 ]
 for r in resources:
     try:
-        nltk.data.find(r)
+        nltk.data.find(f"tokenizers/{r}")
     except LookupError:
-        nltk.download(r, quiet=True)
+        try:
+            nltk.data.find(f"corpora/{r}")
+        except LookupError:
+            nltk.download(r, quiet=True)
 
 class ProductClustering:
     def __init__(self, input_df: pd.DataFrame):
@@ -140,47 +143,6 @@ class ProductClustering:
             "long","stunning","put","thought","song","dear","every","oh","stop","pls"
         }
 
-    # ---------------- TF-IDF filtering (keeps all rows; marks "<empty>") ----------------
-    def _apply_tfidf_filtering(self):
-        non_empty = self.df[self.df["textcleaned"].str.len() > 0]["textcleaned"].tolist()
-        if not non_empty:
-            # ensure tfidf vectorizer exists (empty)
-            self.tfidf_vectorizer = TfidfVectorizer(max_features=1000, ngram_range=(1,2), min_df=1, max_df=0.8)
-            self.tfidf_matrix = self.tfidf_vectorizer.fit_transform([""])
-            return
-
-        # Fit TF-IDF on the non-empty texts (domain weighting)
-        tfidf_vectorizer = TfidfVectorizer(max_features=1000, ngram_range=(1,2), min_df=1, max_df=0.8)
-        tfidf_matrix_local = tfidf_vectorizer.fit_transform(non_empty)
-        feature_names = tfidf_vectorizer.get_feature_names_out()
-        mean_scores = np.array(tfidf_matrix_local.mean(axis=0)).flatten()
-        tfidf_df = pd.DataFrame({"word": feature_names, "tfidf_score": mean_scores})
-
-        # Weight cosmetic/domain terms (as you had)
-        cosmetics_terms = {
-            "makeup","lipstick","foundation","mascara","eyeliner","eyeshadow","blush",
-            "primer","concealer","powder","serum","toner","shampoo","perfume","spf"
-        }
-        tfidf_df["weighted_score"] = tfidf_df.apply(
-            lambda r: r["tfidf_score"] * 5 if r["word"] in cosmetics_terms else r["tfidf_score"],
-            axis=1
-        )
-
-        # choose high-score words
-        high_score_words = set(tfidf_df[tfidf_df["weighted_score"] >= 0.0005]["word"])
-
-        # filter tokens in textcleaned but keep rows (if filtered empty → set "<empty>")
-        def filter_tokens(txt):
-            filtered = [t for t in txt.split() if t in high_score_words]
-            return " ".join(filtered) if filtered else "<empty>"
-
-        self.df["textcleaned"] = self.df["textcleaned"].apply(filter_tokens)
-
-        # store vectorizer & matrix for whole df (transform)
-        self.tfidf_vectorizer = tfidf_vectorizer
-        # transform the current textcleaned (including "<empty>" rows)
-        self.tfidf_matrix = self.tfidf_vectorizer.transform(self.df["textcleaned"].replace("<empty>", ""))
-
     # ---------------- preprocessing pipeline ----------------
     def preprocess(self):
         # apply chain of your preprocessing steps; keep rows
@@ -193,7 +155,36 @@ class ProductClustering:
         self.df["textcleaned"] = self.df["textcleaned"].apply(self._remove_non_meaningful)
         self.df["textcleaned"] = self.df["textcleaned"].apply(self._normalize_tokens)
         self.df["textcleaned"] = self.df["textcleaned"].apply(lambda x: " ".join(x) if isinstance(x, (list,tuple)) else str(x))
-        self._apply_tfidf_filtering()
+        
+        non_empty = self.df[self.df["textcleaned"].str.len() > 0]["textcleaned"].tolist()
+        if not non_empty:
+            self.tfidf_vectorizer = TfidfVectorizer(max_features=1000, ngram_range=(1,2), min_df=1, max_df=0.8)
+            self.tfidf_matrix = self.tfidf_vectorizer.fit_transform([""])
+            return
+
+        self.tfidf_vectorizer = TfidfVectorizer(max_features=1000, ngram_range=(1,2), min_df=1, max_df=0.8)
+        tfidf_matrix_local = self.tfidf_vectorizer.fit_transform(non_empty)
+        feature_names = self.tfidf_vectorizer.get_feature_names_out()
+        mean_scores = np.array(tfidf_matrix_local.mean(axis=0)).flatten()
+        tfidf_df = pd.DataFrame({"word": feature_names, "tfidf_score": mean_scores})
+
+        cosmetics_terms = {
+            "makeup","lipstick","foundation","mascara","eyeliner","eyeshadow","blush",
+            "primer","concealer","powder","serum","toner","shampoo","perfume","spf"
+        }
+        tfidf_df["weighted_score"] = tfidf_df.apply(
+            lambda r: r["tfidf_score"] * 5 if r["word"] in cosmetics_terms else r["tfidf_score"],
+            axis=1
+        )
+
+        high_score_words = set(tfidf_df[tfidf_df["weighted_score"] >= 0.0005]["word"])
+
+        def filter_tokens(txt):
+            filtered = [t for t in txt.split() if t in high_score_words]
+            return " ".join(filtered) if filtered else "<empty>"
+
+        self.df["textcleaned"] = self.df["textcleaned"].apply(filter_tokens)
+        self.tfidf_matrix = self.tfidf_vectorizer.transform(self.df["textcleaned"].replace("<empty>", ""))
 
     # ---------------- data helpers ----------------
     def load_data(self):
@@ -241,8 +232,11 @@ class ProductClustering:
             sil = silhouette_score(valid_embeddings, labels) if len(set(labels)) > 1 else -1
             silhouette_scores.append(sil)
             print(f"k={k}, Silhouette Score: {sil:.4f}")
-        optimal_idx = int(np.argmax(silhouette_scores))
-        self.optimal_k = list(k_range)[optimal_idx]
+        optimal_idx = np.argmax(silhouette_scores) if silhouette_scores else -1
+        if optimal_idx != -1:
+            self.optimal_k = list(k_range)[optimal_idx]
+        else:
+            self.optimal_k = 2  # fallback to a default
         print(f"\nOptimal number of clusters: {self.optimal_k}")
         return self.optimal_k
 
@@ -333,6 +327,43 @@ class ProductClustering:
                 "representative_samples": rep_samples
             }
         return cluster_info
+    
+    def map_cluster_labels(self, cluster_info):
+        """
+        Maps clusters to predefined categories using a zero-shot classification model.
+        """
+        candidate_labels = [
+            "Cosmetics (Eye & Lip)",
+            "Hair treatment",
+            "Make Up",
+            "Physical appearance",
+            "Skin care",
+            "others"
+        ]
+
+        cluster_category_mapping = {}
+
+        for cluster_id, info in cluster_info.items():
+            # Use representative samples to classify the cluster
+            text_to_classify = ". ".join(info.get('representative_samples', []))
+            if text_to_classify:
+                result = self.classifier(
+                    text_to_classify,
+                    candidate_labels=candidate_labels,
+                    multi_label=False
+                )
+                best_category = result['labels'][0]
+                cluster_category_mapping[cluster_id] = best_category
+            else:
+                cluster_category_mapping[cluster_id] = 'others'
+
+        # Apply the mapping to the DataFrame
+        self.df['cluster_label'] = self.df['cluster_label'].apply(
+            lambda x: cluster_category_mapping.get(x, 'others') 
+                    if isinstance(x, (int, np.integer)) else 'others'
+        )
+
+        print("Zero-shot classification mapping complete.")
 
 
     # ---------------- main driver (no disk write) ----------------
@@ -348,10 +379,5 @@ class ProductClustering:
         self.find_optimal_clusters()
         self.perform_clustering()
         cluster_info = self.extract_cluster_keywords()
-
-        # 8) name clusters (optional, for summary printout)
-        cluster_names = self.generate_cluster_names(cluster_info)
-
-        # 9) map numeric cluster ids to your final human categories
         self.map_cluster_labels(cluster_info)
         return self.df.copy()

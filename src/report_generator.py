@@ -21,6 +21,36 @@ load_dotenv()
 api_key = os.getenv("GROQ_API_KEY")
 client = Groq(api_key=api_key)
 
+def generate_video_summary(title, description):
+    """
+    Generates a brief, engaging summary for a YouTube video using Groq API.
+
+    Args:
+        title (str): The title of the YouTube video.
+        description (str): The description of the YouTube video.
+
+    Returns:
+        str: A concise summary of the video.
+    """
+        
+    system_prompt = (
+        "You are an AI assistant specialized in creating concise and engaging summaries for YouTube videos. "
+        "Your tone should be friendly, informative, and appealing to viewers. "
+        "Focus on capturing the main idea and key points in 1-2 sentences, return original text with not format."
+    )
+    
+    user_prompt = f"Please provide a brief summary for this video:\n\nTitle: {title}\nDescription: {description}"
+    
+    chat_completion = client.chat.completions.create(
+        model="openai/gpt-oss-20b",
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt}
+        ]
+    )
+    
+    return chat_completion.choices[0].message.content
+
 def calculate_comprehensive_kpis(df: pd.DataFrame) -> dict:
     """Calculate comprehensive KPIs with additional metrics."""
     total_comments = len(df)

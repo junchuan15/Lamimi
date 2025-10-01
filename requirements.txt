@@ -19,3 +19,4 @@ supabase==2.20.0
 torch==2.4.1
 tqdm==4.67.1
 transformers==4.45.1
+streamlit_navigation_bar==3.3.0

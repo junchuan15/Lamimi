@@ -27,10 +27,30 @@ load_dotenv()
 api_key = os.getenv("GROQ_API_KEY")
 client = Groq(api_key=api_key)
 
-
 def render_powerbi():
-    st.components.v1.iframe(src="https://app.powerbi.com/view?r=eyJrIjoiY2FjYzU4ZWYtYjZmMy00YzY2LWI2YzYtMzAyYWE2YTA5NDAxIiwidCI6ImE2M2JiMWE5LTQ4YzItNDQ4Yi04NjkzLTMzMTdiMDBjYTdmYiIsImMiOjEwfQ%3D%3D", 
-                            width=1300, height=1000, scrolling=True, tab_index =0)
+    powerbi_html = """
+    <div class="iframe-box">
+        <iframe 
+            title="PowerBI Report"
+            width="100%" 
+            height="1000" 
+            src="https://app.powerbi.com/view?r=eyJrIjoiY2FjYzU4ZWYtYjZmMy00YzY2LWI2YzYtMzAyYWE2YTA5NDAxIiwidCI6ImE2M2JiMWE5LTQ4YzItNDQ4Yi04NjkzLTMzMTdiMDBjYTdmYiIsImMiOjEwfQ%3D%3D"
+            frameborder="0" 
+            allowFullScreen="true">
+        </iframe>
+    </div>
+    <style>
+        .iframe-box {
+            border: 1px solid #2E4057;
+            border-radius: 12px;
+            padding: 10px;
+            background-color: #ffffff;
+            box-shadow: 0px 8px 15px rgba(46, 64, 87, 0.2);
+            margin: 20px 0;
+        }
+    </style>
+    """
+    st.markdown(powerbi_html, unsafe_allow_html=True)
 
 def fetch_chart_data(chart_name: str):
     """
