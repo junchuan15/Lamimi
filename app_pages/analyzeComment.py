@@ -18,7 +18,7 @@ def comment_senser_page():
     st.markdown(
         """
         <div class="analyze-header">
-            <h1>Youtube Video & Comment Scrapper</h1>
+            <h1>Youtube Video & Comment Analysis</h1>
         </div>
         """,
         unsafe_allow_html=True
@@ -172,8 +172,10 @@ def comment_senser_page():
         # --- Chart 1: Sentiment Distribution by Cluster ---
         pivot = df.groupby(['cluster_label', 'sentiment_label']).size().unstack(fill_value=0)
         pivot_percent = pivot.div(pivot.sum(axis=1), axis=0)
-        fig1, ax1 = plt.subplots(figsize=(3.5,2.5))  # smaller
-        pivot_percent.plot(kind='area', stacked=True, ax=ax1, color=['green','red'])
+        color_map = {'POSITIVE': 'green', 'NEGATIVE': 'red'}
+        pivot_percent = pivot_percent[[col for col in ['POSITIVE','NEGATIVE'] if col in pivot_percent.columns]]
+        fig1, ax1 = plt.subplots(figsize=(3.5,2.5))
+        pivot_percent.plot(kind='area', stacked=True, ax=ax1, color=[color_map[c] for c in pivot_percent.columns])
         ax1.set_ylabel("Percentage", fontsize=8)
         ax1.set_xlabel("Product Cluster", fontsize=8)
         ax1.tick_params(axis='both', labelsize=7)
@@ -218,13 +220,37 @@ def comment_senser_page():
         ax4.tick_params(axis='both', labelsize=7)
         row2_col2.markdown('<div class="chart-title"><h3>Weighted Relevance vs Sentiment Score</h3></div>', unsafe_allow_html=True)
         row2_col2.pyplot(fig4)
-        st.dataframe (df)
+        
+        row2_col1.markdown('<div class="chart-title"><h3>Comment Analysis Table</h3></div>', unsafe_allow_html=True)
+        cols_to_drop = [
+        "videoId",
+        "title",
+        "description",
+        "publishedAt",
+        "channelId",
+        "tags",
+        "viewCount",
+        "liekCount",
+        "commentCount",
+        "topicCategory",
+        "contentDuration_seconds",
+        "hashtags_video",
+        "likeCount"
+        "emojis_video",
+        ]
+        df_comment = df.drop(columns=cols_to_drop, errors="ignore")
+        st.dataframe(df_comment)
+        st.markdown("<div style='margin-bottom: 30px;'></div>", unsafe_allow_html=True)
         st.divider()
         # === Download button ===
-        video_title_safe = "".join([c if c.isalnum() else "_" for c in video_title])
+        file_path = r"C:\UM\Comp\CommentSense Report-The best of L’Oreal.pdf"
+
+        with open(file_path, "rb") as f:
+            pdf_bytes = f.read()
+
         st.download_button(
             label="Download Report",
-            data=pdf_report,
-            file_name=f"report_{video_title_safe}.pdf",
+            data=pdf_bytes,
+            file_name="CommentSense_Report-The_best_of_L_Oreal.pdf",
             mime="application/pdf"
         )
