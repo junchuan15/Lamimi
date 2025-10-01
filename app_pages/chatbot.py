@@ -54,7 +54,7 @@ def chatbot_page():
             for char in response:
                 typed_text += char
                 placeholder.markdown(typed_text)
-                time.sleep(0.007)
+                time.sleep(0.005)
 
         # Save assistant response
         st.session_state["messages"].append({"role": "assistant", "content": response})

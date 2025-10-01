@@ -33,3 +33,127 @@
     font-size: 18px;
     font-style: italic;
 }
+
+.subheader-title h1 {
+    color: #2E4057 ;
+    font-family: "Source Sans Pro" ;
+    font-size: 40px ;
+    font-weight: bold ;
+    padding-left: 0.25rem ;
+}
+
+/* Parent container box */
+.video-card {
+  display: flex;
+  gap: 1.5rem;
+  padding: 1.0rem;
+  border-radius: 14px;
+  /* border: 1px solid rgba(46,64,87,0.15); */
+  background: #ffffff;
+  box-shadow: 0 6px 18px rgba(46,64,87,0.3);
+  margin-top: 0.5rem;
+  align-items: flex-start; 
+}
+
+/* Video container */
+.video-card .video-wrapper {
+  flex: 0 0 40%; 
+  min-width: 300px;
+}
+
+.video-card .video-wrapper iframe {
+  width: 100%;
+  height: 420px;
+  border-radius: 10px;
+}
+
+/* Details box inside same card */
+.video-card .video-detail-box {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem; /* spacing between sections */
+  padding: 0.5rem;
+  height: auto; /* no forced height */
+}
+
+/* Styling for text sections */
+.video-card .video-title {
+  font-size: 24px !important;
+  font-weight: 700 !important;
+  color: #2E4057 !important;
+  margin-bottom: 0.2rem;
+}
+
+
+.video-description {
+  font-size: 17px;
+  color: #333;
+  margin-bottom: 0.6rem;
+  line-height: 1.4;
+}
+
+/* Summary box - auto height */
+.summary {
+  background: #f8fafc;
+  border-left: 4px solid #2E4057;
+  border-radius: 6px;
+  padding: 0.6rem;
+  font-size: 17px;
+  color: #2b2b2b;
+  display: inline-block; /* shrink-wrap to content */
+  max-width: 100%;
+  padding-bottom: 0.7rem;
+}
+
+.meta p {
+  margin: 0.25rem;
+  font-size: 16px;
+  color: #313131;
+}
+
+.metrics-container {
+    display: flex;
+    gap: 2rem; /* bigger gap */
+    margin-top: 1rem;
+    flex-wrap: wrap; /* wrap on small screens */
+}
+
+.metric-card {
+    flex: 1 1 150px; /* flexible width */
+    min-width: 120px;
+    background: #ffffff;
+    border: 1.5px solid #999999;
+    border-radius: 10px;
+    padding: 1rem;
+    text-align: center;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    transition: transform 0.3s, box-shadow 0.3s;
+    cursor: default;
+}
+
+.metric-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 15px rgba(1, 22, 65, 0.6); /* shadow turns blue */
+}
+
+.metric-title {
+    font-size: 1.2rem;
+    color: #333;
+    margin-bottom: 0.5rem;
+}
+
+.metric-value {
+    font-size: 2.0rem;
+    font-weight: bold;
+    color: #2E4057;
+}
+
+.chart-title h3 {
+    color: #2E4057;
+    font-family: "Source Sans Pro";
+    font-size: 28px;
+    font-weight: bold;
+    text-align: left;
+    margin-bottom: 5px;
+}

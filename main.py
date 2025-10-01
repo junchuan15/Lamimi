@@ -6,7 +6,7 @@ from app_pages.analyzeComment import comment_senser_page
 
 # --- Page Config ---
 st.set_page_config(
-    page_title="L'ORÉAL Datathon",
+    page_title="L'ORÉAL CommentSense",
     layout="wide",
     menu_items={
         'About': "This is the website for L'ORÉAL Datathon."

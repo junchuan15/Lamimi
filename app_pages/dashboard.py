@@ -32,7 +32,7 @@ def dashboard_page():
         render_powerbi()
 
     with col2:
-        st.markdown('<div class="insights-title"><h1>Insights Panel</h1></div>', unsafe_allow_html=True)
+        st.markdown('<div class="subheader-title"><h1>Insights Panel</h1></div>', unsafe_allow_html=True)
         dashboard_pages = ["Share of Engagement (SoE)", "Comment Analysis"]
         st.markdown('<div class="form-label"><h5>Select Dashboard</h5></div>', unsafe_allow_html=True)
         selected_dashboard = st.radio(

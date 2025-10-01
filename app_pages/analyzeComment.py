@@ -1,6 +1,8 @@
 import streamlit as st
 import pandas as pd
-import altair as alt
+import matplotlib.pyplot as plt
+import seaborn as sns
+import re
 import os
 from src.youtube_scrapper import scrape_video
 from src.report_generator import generate_pdf_report, generate_video_summary
@@ -23,117 +25,202 @@ def comment_senser_page():
     )
 
     # --- Initialize session state ---
-    if "video_url" not in st.session_state:
-        st.session_state.video_url = ""
-    if "video_data" not in st.session_state:
-        st.session_state.video_data = None
-    if "video_summary" not in st.session_state:
-        st.session_state.video_summary = None
-    if "pdf_report" not in st.session_state:
-        st.session_state.pdf_report = None
-        
-    st.markdown('<div class="form-label"><h5>Insert Video/Shorts Link For Analysis</h5></div>', unsafe_allow_html=True)
+    for key, default in {
+        "video_url": "",
+        "video_data": None,
+        "video_summary": None,
+        "pdf_report": None,
+    }.items():
+        if key not in st.session_state:
+            st.session_state[key] = default
+
+    # --- Input field  ---
+    st.markdown('<div class="form-label"><h5>Insert Youtube Video/Shorts URL</h5></div>', unsafe_allow_html=True)
     url_input = st.text_input(
         "",
         label_visibility="collapsed",
         value=st.session_state["video_url"],
-        placeholder="Enter YouTube Video/Shorts URL"
+        placeholder="Insert URL here and Enter (e.g., https://www.youtube.com/watch?v=example)",
     )
 
+    # --- Processing function ---
     def process_video(url):
-        """Scrape video, generate summary, and PDF report."""
         df = scrape_video(url)
         if df.empty:
             st.error("No data found. Check the URL or API key.")
             return None, None, None
 
-        # Video summary
         video_title = df['title'].iloc[0]
         video_description = df['description'].iloc[0]
         summary = generate_video_summary(video_title, video_description)
-
-        # PDF report
         pdf_report = generate_pdf_report(df)
         return df, summary, pdf_report
 
-    if url_input:
-        if st.button("Scrape & Generate Report"):
+    # --- Trigger when new URL entered ---
+    if url_input and url_input != st.session_state.video_url:
+        st.session_state.video_url = url_input
+        with st.spinner("Scraping video and generating report..."):
             df, summary, pdf_report = process_video(url_input)
-            st.session_state.video_data = df
-            st.session_state.video_summary = summary
-            st.session_state.pdf_report = pdf_report
+        st.session_state.video_data = df
+        st.session_state.video_summary = summary
+        st.session_state.pdf_report = pdf_report
 
-    # --- Display if data exists ---
+        # --- Display if data exists ---
     if st.session_state.video_data is not None:
         df = st.session_state.video_data
         summary = st.session_state.video_summary
         pdf_report = st.session_state.pdf_report
+        st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
+        st.markdown('<div class="subheader-title"><h1>Video Details</h1></div>', unsafe_allow_html=True)
+        url = st.session_state.video_url
+        video_id = None
+        patterns = [
+            r"v=([a-zA-Z0-9_-]{11})",   # standard watch?v=
+            r"youtu\.be/([a-zA-Z0-9_-]{11})",  # short link
+            r"shorts/([a-zA-Z0-9_-]{11})"      # shorts
+        ]
+        for p in patterns:
+            match = re.search(p, url)
+            if match:
+                video_id = match.group(1)
+                break
 
-        # Video Details
+        # --- Video details ---
         video_title = df['title'].iloc[0]
         video_description = df['description'].iloc[0]
         video_channel_id = df['channelId'].iloc[0]
         video_published_date = df['publishedAt'].iloc[0]
         video_likes = df['likeCount'].iloc[0]
+        video_views = df['viewCount'].iloc[0]
+        video_comments = df['commentCount'].iloc[0]
         video_engagement_rate = df['engagement_rate'].iloc[0]
 
-        st.markdown("<div class='video-details'>", unsafe_allow_html=True)
-        st.markdown(f"<p class='video-title'>{video_title}</p>", unsafe_allow_html=True)
-        st.markdown(f"<p class='video-description'>{video_description}</p>", unsafe_allow_html=True)
-        st.markdown(f"<p class='video-summary'><strong>Summary:</strong> {summary}</p>", unsafe_allow_html=True)
-        st.markdown(f"""
-            <p><strong>Channel ID:</strong> {video_channel_id}</p>
-            <p><strong>Published Date:</strong> {video_published_date}</p>
-            <p><strong>Likes:</strong> {video_likes:,}</p>
-            <p><strong>Engagement Rate:</strong> {video_engagement_rate:.2%}</p>
-        """, unsafe_allow_html=True)
-        st.markdown("</div>", unsafe_allow_html=True)
+        st.markdown(
+            f"""
+            <div class="video-card">
+                <div class="video-wrapper">
+                    <iframe src="https://www.youtube.com/embed/{video_id}" 
+                    frameborder="0" allowfullscreen></iframe>
+                </div>
+                <div class="video-detail-box">
+                    <p class="video-title">Title: {video_title}</p>
+                    <p class="video-description">{video_description}</p>
+                    <div class="summary"><b>Summary:</b> {summary}</div>
+                    <div class="meta" style="display: flex; gap: 2rem;">
+                        <div class="meta-column" style="flex: 1;">
+                            <p><b>Channel ID:</b> {video_channel_id}</p>
+                            <p><b>Published Date:</b> {video_published_date}</p>
+                            <p><b>Engagement Rate:</b> {video_engagement_rate:.2%}</p>
+                        </div>
+                        <div class="meta-column" style="flex: 1;">
+                            <p><b>Likes:</b> {video_likes:,}</p>
+                            <p><b>Views:</b> {video_views:,}</p>
+                            <p><b>Comments:</b> {video_comments:,}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
 
-        # --- Comment Analysis Overview ---
-        st.subheader("Comment Analysis Overview")
-
+        st.divider()
+        # --- Metrics calculation ---
         total_comments = len(df)
         spam_count = df['is_spam'].sum()
-        spam_ratio = spam_count / total_comments if total_comments > 0 else 0
-        quality_comments = len(df[df['sentiment_score'] >= 0.7])
+        non_spam_count = total_comments - spam_count
 
-        col1, col2, col3 = st.columns(3)
-        col1.metric("Total Comments", f"{total_comments:,}")
-        col2.metric("Spam Ratio", f"{spam_ratio:.2%}")
-        col3.metric("Quality Comments", f"{quality_comments:,}")
+        # Non-spam : spam ratio in percentage
+        non_spam_percent = (non_spam_count / total_comments) * 100 if total_comments > 0 else 0
+        spam_percent = (spam_count / total_comments) * 100 if total_comments > 0 else 0
+        nonspam_spam_ratio = f"{non_spam_percent:.0f} : {spam_percent:.0f}"
 
-        # --- Charts ---
-        col1, col2 = st.columns(2)
-        with col1:
-            sentiment_counts = df['sentiment_label'].value_counts().reset_index()
-            sentiment_counts.columns = ['sentiment_label', 'count']
-            sentiment_chart = alt.Chart(sentiment_counts).mark_arc(innerRadius=50).encode(
-                theta=alt.Theta(field="count", type="quantitative"),
-                color=alt.Color(field="sentiment_label", type="nominal", title="Sentiment"),
-                tooltip=['sentiment_label', 'count']
-            ).properties(title="Sentiment Distribution")
-            st.altair_chart(sentiment_chart, use_container_width=True)
+        relevant_comments = df['is_relevant'].sum()
+        relevance_percent = (relevant_comments / total_comments) * 100 if total_comments > 0 else 0
+        avg_product_resonance = df['product_resonance_score'].mean() if total_comments > 0 else 0
 
-        with col2:
-            category_counts = df['cluster_label'].value_counts().nlargest(5).reset_index()
-            category_counts.columns = ['cluster_label', 'count']
-            category_chart = alt.Chart(category_counts).mark_bar().encode(
-                x=alt.X('cluster_label', sort='-y', title="Product Category"),
-                y=alt.Y('count', title="Number of Comments"),
-                tooltip=['cluster_label', 'count']
-            ).properties(title="Top 5 Product Categories by Comment Volume")
-            st.altair_chart(category_chart, use_container_width=True)
+        # --- Custom Metric Cards ---
+        st.markdown(
+            f"""
+            <div class="subheader-title"><h1>Comment Analysis Overview</h1></div>
+            <div class="metrics-container">
+                <div class="metric-card">
+                    <div class="metric-title">Total Comments</div>
+                    <div class="metric-value">{total_comments:,}</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-title">Non-Spam : Spam Ratio</div>
+                    <div class="metric-value">{nonspam_spam_ratio}</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-title">Comment Relevance %</div>
+                    <div class="metric-value">{relevance_percent:.2f}%</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-title">Average Product Resonance Score</div>
+                    <div class="metric-value">{avg_product_resonance:.2f}</div>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+        st.markdown("<div style='margin-bottom: 30px;'></div>", unsafe_allow_html=True)
 
-        sentiment_by_category = df.groupby(['cluster_label', 'sentiment_label']).size().reset_index(name='count')
-        sentiment_category_chart = alt.Chart(sentiment_by_category).mark_bar().encode(
-            x=alt.X('cluster_label', title="Product Category"),
-            y=alt.Y('count', title="Number of Comments"),
-            color=alt.Color('sentiment_label', title="Sentiment"),
-            tooltip=['cluster_label', 'sentiment_label', 'count']
-        ).properties(title="Sentiment Breakdown by Product Category")
-        st.altair_chart(sentiment_category_chart, use_container_width=True)
+        row1_col1, row1_col2 = st.columns(2)
+        row2_col1, row2_col2 = st.columns(2)
 
-        # --- PDF download ---
+        # --- Chart 1: Sentiment Distribution by Cluster ---
+        pivot = df.groupby(['cluster_label', 'sentiment_label']).size().unstack(fill_value=0)
+        pivot_percent = pivot.div(pivot.sum(axis=1), axis=0)
+        fig1, ax1 = plt.subplots(figsize=(3.5,2.5))  # smaller
+        pivot_percent.plot(kind='area', stacked=True, ax=ax1, color=['green','red'])
+        ax1.set_ylabel("Percentage", fontsize=8)
+        ax1.set_xlabel("Product Cluster", fontsize=8)
+        ax1.tick_params(axis='both', labelsize=7)
+        ax1.legend(title="Sentiment", fontsize=7, title_fontsize=8)
+        row1_col1.markdown('<div class="chart-title"><h3>Sentiment Distribution by Cluster</h3></div>', unsafe_allow_html=True)
+        row1_col1.pyplot(fig1)
+        plt.tight_layout()
+        
+        # --- Chart 2: Actionability Label Distribution ---
+        counts = df['actionability_label'].value_counts()
+        fig2, ax2 = plt.subplots(figsize=(3.5,2.5))  # smaller
+        colors = sns.color_palette('pastel')[0:len(counts)]
+        explode = [0.05]*len(counts)
+        ax2.pie(
+            counts, labels=counts.index, autopct='%1.1f%%', colors=colors,
+            explode=explode, shadow=True, startangle=90, textprops={'fontsize':8}
+        )
+        ax2.axis('equal')
+        row1_col2.markdown('<div class="chart-title"><h3>Actionability Label Distribution</h3></div>', unsafe_allow_html=True)
+        row1_col2.pyplot(fig2)
+
+        # --- Chart 3: Product Resonance Distribution ---
+        fig3, ax3 = plt.subplots(figsize=(3.5,2.5))  # smaller
+        sns.histplot(
+            data=df, x='product_resonance_score', hue='cluster_label',
+            multiple='stack', palette='Set2', ax=ax3
+        )
+        ax3.set_xlabel("Product Resonance Score", fontsize=8)
+        ax3.set_ylabel("Number of Comments", fontsize=8)
+        ax3.tick_params(axis='both', labelsize=7)
+        row2_col1.markdown('<div class="chart-title"><h3>Product Resonance Distribution</h3></div>', unsafe_allow_html=True)
+        row2_col1.pyplot(fig3)
+
+        # --- Chart 4: Scatter Plot (Weighted Relevance vs Sentiment Score) ---
+        fig4, ax4 = plt.subplots(figsize=(3.5,2.5))  # smaller
+        sns.scatterplot(
+            data=df, x='weighted_relevance', y='sentiment_score',
+            hue='cluster_label', palette='Set1', ax=ax4, s=30, alpha=0.7  # smaller markers
+        )
+        ax4.set_xlabel("Weighted Relevance", fontsize=8)
+        ax4.set_ylabel("Sentiment Score", fontsize=8)
+        ax4.tick_params(axis='both', labelsize=7)
+        row2_col2.markdown('<div class="chart-title"><h3>Weighted Relevance vs Sentiment Score</h3></div>', unsafe_allow_html=True)
+        row2_col2.pyplot(fig4)
+        st.dataframe (df)
+        st.divider()
+        # === Download button ===
         video_title_safe = "".join([c if c.isalnum() else "_" for c in video_title])
         st.download_button(
             label="Download Report",
